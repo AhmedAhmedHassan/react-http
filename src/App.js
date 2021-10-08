@@ -2,6 +2,7 @@ import React,{useState,useCallback,useEffect} from 'react';
 
 import MoviesList from './components/MoviesList';
 import './App.css';
+import AddMovie from './components/AddMovie';
 
 function App() {
   
@@ -9,23 +10,27 @@ function App() {
   const [loading, setLoading]=useState(false)
   const [error, setError]=useState(null)
 
+  // get data from the database
   const moviesHandler = useCallback(async ()=>{
     setLoading(true) 
     try{
-     const response= await fetch('https://swapi.dev/api/films/')
+     const response= await fetch('https://react-http-38c83-default-rtdb.firebaseio.com/movies.json')
      if(!response.ok){
        throw new Error('Something went wrong')
      }
      const data=await response.json()
-        const transformData= data.results.map(item=>{
-          return{
-          id:item.episode_id,
-          title:item.title,
-          releaseDate:item.release_date,
-          openingText:item.opening_crawl
-          }
-        })
-        setMovies(transformData)
+     const loadedMovies=[]
+
+     for(const key in data){
+       loadedMovies.push({
+         id:key,
+         title:data[key].title,
+         releaseDate:data[key].releaseDate,
+         openingText:data[key].openingText
+       })
+     }
+        
+        setMovies(loadedMovies)
     }
     catch(error){
       setError(error.message)
@@ -36,7 +41,35 @@ function App() {
 
 useEffect(() => {
    moviesHandler()
+   
 }, [moviesHandler])
+
+
+// Send request to the firebase
+async function addMovieHandler(movie) {
+  setLoading(true) 
+    try{
+  const response= await fetch('https://react-http-38c83-default-rtdb.firebaseio.com/movies.json',{
+    method:'POST',
+    body:JSON.stringify(movie),
+    headers:{
+      'Content-Type':'application/json'
+    }
+  })
+
+  if(!response.ok){
+    throw new Error('Something went wrong')
+  }
+
+  const data=await response.json()
+
+  console.log(data)
+} catch(error){
+  setError(error.message)
+}
+setLoading(false)
+moviesHandler()
+}
 
 
 let content=<p>No Data Was Found Yet</p>
@@ -55,6 +88,9 @@ if(loading){
 
   return (
     <React.Fragment>
+       <section>
+        <AddMovie onAddMovie={addMovieHandler} />
+      </section>
       <section>
         <button onClick={moviesHandler}>Fetch Movies</button>
       </section>
